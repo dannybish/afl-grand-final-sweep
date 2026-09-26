@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>AFL Grand Final Sweep</title>
+<style>
+  :root {
+    color-scheme: light;
+    --navy: #0b1f3a;
+    --navy-dark: #071527;
+    --gold: #d4a017;
+    --gold-light: #f0c94a;
+    --green: #1f8a4d;
+    --red: #c0392b;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --border: #e0e2e8;
+    --text: #1c1f26;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    background: linear-gradient(135deg, var(--navy), var(--navy-dark));
+    color: #fff;
+    padding: 18px 16px 14px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  header h1 {
+    margin: 0 0 2px;
+    font-size: 1.25rem;
+    letter-spacing: 0.02em;
+  }
+  header .sub {
+    font-size: 0.78rem;
+    color: var(--gold-light);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  nav.tabs {
+    display: flex;
+    overflow-x: auto;
+    background: var(--navy-dark);
+    position: sticky;
+    top: 62px;
+    z-index: 19;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs button {
+    flex: 0 0 auto;
+    padding: 11px 14px;
+    background: none;
+    border: none;
+    color: #b7c0d1;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+  }
+  nav.tabs button.active {
+    color: #fff;
+    border-bottom-color: var(--gold);
+  }
+  nav.tabs button .badge {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 0.65rem;
+    background: var(--gold);
+    color: var(--navy-dark);
+    border-radius: 8px;
+    padding: 1px 5px;
+    font-weight: 700;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 14px 12px 60px;
+  }
+  section.panel { display: none; }
+  section.panel.active { display: block; animation: fade .15s ease; }
+  @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    color: var(--navy);
+  }
+  .card p.hint {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: #fff;
+    color: var(--text);
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 90px; }
+  .row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .row > div { flex: 1; }
+  .btn {
+    display: inline-block;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+  }
+  .btn-primary { background: var(--navy); color: #fff; }
+  .btn-gold { background: var(--gold); color: var(--navy-dark); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--navy); }
+  .btn-danger { background: #fdecea; color: var(--red); border: 1px solid #f6c6c0; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-sm { padding: 6px 10px; font-size: 0.75rem; }
+  .btn-block { width: 100%; }
+  .participant-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .participant-row:last-child { border-bottom: none; }
+  .participant-row .name { flex: 1; font-size: 0.9rem; font-weight: 600; }
+  .pill {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--border);
+    color: var(--muted);
+  }
+  .pill.ok { background: #e5f4ea; color: var(--green); }
+  .pill.warn { background: #fdecea; color: var(--red); }
+  .pill.gold { background: #fbeecb; color: #8a6300; }
+  .status-banner {
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .status-banner.info { background: #eaf1fb; color: #1c4b8c; }
+  .status-banner.warn { background: #fdf3e0; color: #8a5b00; }
+  .status-banner.ok { background: #e5f4ea; color: var(--green); }
+  table.simple { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  table.simple th, table.simple td { text-align: left; padding: 7px 4px; border-bottom: 1px solid var(--border); }
+  table.simple th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .draw-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: #fafbfc;
+  }
+  .draw-card .who { font-weight: 700; font-size: 0.88rem; color: var(--navy); margin-bottom: 4px; }
+  .draw-card .players { font-size: 0.85rem; color: var(--text); }
+  .tip-grid {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 6px 8px;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+  .tip-grid .head { font-size: 0.68rem; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .conflict { outline: 2px solid var(--red); }
+  .conflict-note { color: var(--red); font-size: 0.72rem; margin-top: 2px; }
+  .tip-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: #fafbfc;
+  }
+  .tip-card-name { font-weight: 700; font-size: 0.92rem; color: var(--navy); margin-bottom: 8px; }
+  .tip-round-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .tip-round-row:last-child { margin-bottom: 0; }
+  .tip-round-label {
+    flex: 0 0 68px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .tip-round-row .tip-team { flex: 1.4; }
+  .tip-round-row .tip-margin { flex: 0 0 64px; }
+  .empty { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 18px 0; }
+  .footer-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .winner-highlight { background: #fbeecb; border: 1px solid var(--gold); }
+  .kv { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-weight: 700; }
+  .alloc-note { font-size: 0.78rem; color: var(--muted); line-height: 1.4; margin-top: 8px; }
+  details summary { cursor: pointer; font-size: 0.8rem; color: var(--navy); font-weight: 600; margin-bottom: 6px; }
+  .team-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+    border: 1px solid rgba(0,0,0,0.25);
+    flex: 0 0 auto;
+  }
+  .player-chip { white-space: nowrap; }
+  .team-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.76rem; color: var(--muted); margin: -2px 0 10px; }
+  .legend-item { display: inline-flex; align-items: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏆 Grand Final Sweep</h1>
+  <div class="sub">AFL Edition</div>
+</header>
+
+<nav class="tabs" id="tabNav">
+  <button data-tab="intro">Guide</button>
+  <button data-tab="teams">1. Teams</button>
+  <button data-tab="setup">2. Entrants</button>
+  <button data-tab="draws">3. Draws</button>
+  <button data-tab="tips">4. Tips</button>
+  <button data-tab="payments">5. Payments</button>
+  <button data-tab="review">6. Review</button>
+  <button data-tab="results">7. Results</button>
+</nav>
+
+<main>
+
+  <!-- GUIDE / INTRO -->
+  <section class="panel" id="panel-intro">
+    <div class="card">
+      <h2>Welcome to the Grand Final Sweep</h2>
+      <p class="hint">This app runs a simple sweep for AFL Grand Final day among family, friends or colleagues. Here's how it works, step by step:</p>
+      <ol style="margin: 0 0 12px; padding-left: 20px; font-size: 0.88rem; line-height: 1.7; color: var(--text);">
+        <li><strong>Teams</strong> — confirm the two Grand Final teams and their full player lists.</li>
+        <li><strong>Entrants</strong> — set the entry fee and add everyone taking part.</li>
+        <li><strong>Draws</strong> — randomly deal every player out across all entrants for the Norm Smith Medal and First Goalscorer categories.</li>
+        <li><strong>Tips</strong> — each entrant tips a team and margin for both half-time and full-time.</li>
+        <li><strong>Payments</strong> — track who's paid their entry fee.</li>
+        <li><strong>Review</strong> — check everyone's picks and see the prize pool split before the game.</li>
+        <li><strong>Results</strong> — once the game's done, enter the actual result to reveal the winners.</li>
+      </ol>
+      <p class="hint">Work through the tabs at the top in order — a <strong>Next</strong> button will appear on each page once you've done enough there to move on. You can always jump back to an earlier tab to make changes.</p>
+      <div class="footer-actions">
+        <button class="btn btn-gold btn-block" id="getStartedBtn">Get Started →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAMS -->
+  <section class="panel" id="panel-teams">
+    <div class="card">
+      <h2>The two Grand Final teams</h2>
+      <p class="hint" id="teamsHint"></p>
+      <div class="row">
+        <div>
+          <label for="teamAName">Home Team</label>
+          <input type="text" id="teamAName" placeholder="e.g. Brisbane Lions">
+        </div>
+        <div>
+          <label for="teamBName">Away Team</label>
+          <input type="text" id="teamBName" placeholder="e.g. Geelong Cats">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="teamAPlayers">Team A players (one per line)</label>
+          <textarea id="teamAPlayers" placeholder="Player One&#10;Player Two&#10;..."></textarea>
+        </div>
+        <div>
+          <label for="teamBPlayers">Team B players (one per line)</label>
+          <textarea id="teamBPlayers" placeholder="Player One&#10;Player Two&#10;..."></textarea>
+        </div>
+      </div>
+      <div class="footer-actions">
+        <button class="btn btn-gold btn-block" id="confirmTeamsBtn">Confirm teams &amp; player list</button>
+      </div>
+      <div id="teamsStatus"></div>
+    </div>
+    <div class="footer-actions" id="next-teams" style="display:none;">
+      <button class="btn btn-primary btn-block" data-goto="setup">Next: Entrants →</button>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section class="panel" id="panel-setup">
+    <div class="card">
+      <h2>Entry fee</h2>
+      <p class="hint">The amount each entrant chips into the pool.</p>
+      <div class="row">
+        <div>
+          <label for="entryFee">Entry fee ($)</label>
+          <input type="number" id="entryFee" min="0" step="1" placeholder="e.g. 10">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Entrants</h2>
+      <p class="hint">Add everyone in the sweep. You'll need at least 2 to run the draws.</p>
+      <div class="row">
+        <div>
+          <input type="text" id="newParticipant" placeholder="Entrant name">
+        </div>
+        <button class="btn btn-primary" id="addParticipantBtn" style="flex:0 0 auto;">Add</button>
+      </div>
+      <div id="participantList"></div>
+      <div class="empty" id="participantEmpty" style="display:none;">No entrants yet — add some above.</div>
+    </div>
+
+    <div class="card">
+      <h2>Selection allocation</h2>
+      <p class="hint">How the Norm Smith Medal and First Goalscorer draws will split up once you run them.</p>
+      <div id="allocationInfo"></div>
+    </div>
+    <div class="footer-actions" id="next-setup" style="display:none;">
+      <button class="btn btn-primary btn-block" data-goto="draws">Next: Draws →</button>
+    </div>
+  </section>
+
+  <!-- DRAWS -->
+  <section class="panel" id="panel-draws">
+    <div class="card">
+      <h2>Norm Smith Medal &amp; First Goalscorer draws</h2>
+      <p class="hint">Every player from both teams is dealt out evenly across all entrants, with any leftover "lucky extra" picks randomly spread around (see the Entrants tab for the breakdown). This needs entrants added and teams confirmed first.</p>
+      <div id="drawsGate"></div>
+      <div id="drawsTeamLegend"></div>
+      <div class="footer-actions">
+        <button class="btn btn-primary btn-block" id="runDrawsBtn">Run both draws</button>
+      </div>
+    </div>
+
+    <div class="card" id="normSmithCard" style="display:none;">
+      <h2>🏅 Norm Smith Medal draw</h2>
+      <div id="normSmithResults"></div>
+    </div>
+
+    <div class="card" id="firstGoalCard" style="display:none;">
+      <h2>⚽ First Goalscorer draw</h2>
+      <div id="firstGoalResults"></div>
+    </div>
+    <div class="footer-actions" id="next-draws" style="display:none;">
+      <button class="btn btn-primary btn-block" data-goto="tips">Next: Tips →</button>
+    </div>
+  </section>
+
+  <!-- TIPS -->
+  <section class="panel" id="panel-tips">
+    <div class="card">
+      <h2>Tips</h2>
+      <p class="hint">Enter each entrant's half-time and full-time team + margin together. No two entrants can hold the exact same team + margin within a round — duplicates are outlined in red.</p>
+      <div id="tipsList"></div>
+    </div>
+    <div class="footer-actions" id="next-tips" style="display:none;">
+      <button class="btn btn-primary btn-block" data-goto="payments">Next: Payments →</button>
+    </div>
+  </section>
+
+  <!-- PAYMENTS -->
+  <section class="panel" id="panel-payments">
+    <div class="card">
+      <h2>Payments</h2>
+      <div id="paymentSummary"></div>
+      <div class="footer-actions">
+        <button class="btn btn-gold" id="markAllPaidBtn">Mark all as paid</button>
+      </div>
+      <div id="paymentList"></div>
+    </div>
+    <div class="footer-actions" id="next-payments" style="display:none;">
+      <button class="btn btn-primary btn-block" data-goto="review">Next: Review →</button>
+    </div>
+  </section>
+
+  <!-- REVIEW -->
+  <section class="panel" id="panel-review">
+    <div class="card">
+      <h2>Prize pool</h2>
+      <p class="hint">Whole-dollar prize splits across the four categories, based on the entry fee and number of entrants. If the pool doesn't divide evenly by four, Full-time margin (then Half-time margin) gets the extra dollar(s).</p>
+      <div id="reviewWinnings"></div>
+    </div>
+    <div class="card">
+      <h2>All entrants</h2>
+      <div id="reviewTeamLegend"></div>
+      <div class="row">
+        <div>
+          <label for="reviewSort">Sort by</label>
+          <select id="reviewSort">
+            <option value="name">Entrant name (A–Z)</option>
+            <option value="firstGoal">First Goal selection (A–Z)</option>
+            <option value="normSmith">Norm Smith selection (A–Z)</option>
+            <option value="halftime">Half-time margin</option>
+            <option value="fulltime">Full-time margin</option>
+          </select>
+        </div>
+      </div>
+      <div id="reviewList"></div>
+    </div>
+    <div class="footer-actions" id="next-review" style="display:none;">
+      <button class="btn btn-primary btn-block" data-goto="results">Next: Results →</button>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="panel" id="panel-results">
+    <div class="card">
+      <h2>Enter the actual result</h2>
+      <p class="hint">Once the game's done, fill this in to see who won each category.</p>
+      <div class="row">
+        <div>
+          <label for="actualFirstGoal">First goalscorer</label>
+          <select id="actualFirstGoal"><option value="">— Select player —</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="actualHTScoreA">Half-time score — <span id="htLabelA">Team A</span></label>
+          <input type="number" id="actualHTScoreA" min="0" step="1">
+        </div>
+        <div>
+          <label for="actualHTScoreB">Half-time score — <span id="htLabelB">Team B</span></label>
+          <input type="number" id="actualHTScoreB" min="0" step="1">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="actualFTScoreA">Full-time score — <span id="ftLabelA">Team A</span></label>
+          <input type="number" id="actualFTScoreA" min="0" step="1">
+        </div>
+        <div>
+          <label for="actualFTScoreB">Full-time score — <span id="ftLabelB">Team B</span></label>
+          <input type="number" id="actualFTScoreB" min="0" step="1">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="actualNormSmith">Norm Smith Medal winner</label>
+          <select id="actualNormSmith"><option value="">— Select player —</option></select>
+        </div>
+      </div>
+      <button class="btn btn-gold btn-block" id="saveResultsBtn">Save result &amp; show winners</button>
+    </div>
+
+    <div class="card" id="winnersCard" style="display:none;">
+      <h2>🎉 Winners</h2>
+      <div id="winnersBody"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "afl_gf_sweep_state_v1";
+
+  // Built-in default teams. Leave both arrays empty ([]) to have the app start
+  // with a blank Teams tab that the admin fills in themselves. When teams are
+  // known ahead of time, they can be baked in here so the Teams tab is
+  // pre-filled (the admin can still edit or replace them before confirming).
+  var DEFAULT_TEAM_A = {
+    name: "Fremantle",
+    players: ["J Clark", "A Pearce", "J McVee", "K Worner", "O McDonald", "H Chapman", "M Johnson", "A Brayshaw", "N Erasmus", "M Frederick", "M Reid", "S Switkowski", "J Amiss", "J Treacy", "P Voss", "L Jackson", "C Serong", "S Bolton", "I Dudley", "M Cox", "H Young", "C Wagner", "L Ryan"]
+  };
+  var DEFAULT_TEAM_B = {
+    name: "Brisbane Lions",
+    players: ["K Lohmann", "C Rayner", "E Hipwood", "O Allen", "L Morris", "C Cameron", "Z Bailey", "W Ashcroft", "J Berry", "D Zorko", "D Gardiner", "D Wilmot", "R Lester", "H Andrews", "T Gallop", "D Fort", "J Dunkley", "L Neale", "S Draper", "J Fletcher", "H McCluggage", "L Ashcroft", "C McKenna"]
+  };
+
+  var defaultState = {
+    entryFee: null,
+    participants: [],
+    teamA: { name: DEFAULT_TEAM_A.name, players: DEFAULT_TEAM_A.players.slice() },
+    teamB: { name: DEFAULT_TEAM_B.name, players: DEFAULT_TEAM_B.players.slice() },
+    teamsConfirmed: false,
+    draws: { normSmith: null, firstGoal: null },
+    tips: { halftime: {}, fulltime: {} },
+    payments: {},
+    results: { normSmith: "", firstGoal: "", ht: { a: null, b: null }, ft: { a: null, b: null } }
+  };
+
+  var state = loadState();
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return JSON.parse(JSON.stringify(defaultState));
+      var parsed = JSON.parse(raw);
+      return Object.assign(JSON.parse(JSON.stringify(defaultState)), parsed);
+    } catch (e) {
+      console.warn("Could not load saved state", e);
+      return JSON.parse(JSON.stringify(defaultState));
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn("Could not save state", e);
+    }
+  }
+
+  function uid() {
+    return "p_" + Math.random().toString(36).slice(2, 10);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  // ---------- Team colours ----------
+  // Small coloured dot shown next to player names and tips so it's easy to
+  // tell at a glance which of the two Grand Final teams they belong to.
+  // Recognises the real club colours for all 18 AFL clubs (checked in this
+  // order so overlapping names like "Port Adelaide" / "Adelaide" and "North
+  // Melbourne" / "Melbourne" resolve to the right club). Falls back to two
+  // generic but clearly different colours for any team name it doesn't
+  // recognise, so custom/future team names still get a usable dot.
+  var AFL_TEAM_COLORS = [
+    { match: ["port adelaide", "power"], color: "#008c95" },
+    { match: ["adelaide", "crows"], color: "#002b5c" },
+    { match: ["north melbourne", "kangaroos", "roos"], color: "#003a70" },
+    { match: ["melbourne", "demons"], color: "#062a78" },
+    { match: ["brisbane", "lions"], color: "#7a1636" },
+    { match: ["carlton", "blues"], color: "#041e42" },
+    { match: ["collingwood", "magpies", "pies"], color: "#000000" },
+    { match: ["essendon", "bombers"], color: "#cc2031" },
+    { match: ["fremantle", "dockers", "freo"], color: "#2f1a4e" },
+    { match: ["geelong", "cats"], color: "#1b2a4a" },
+    { match: ["gold coast", "suns"], color: "#e21937" },
+    { match: ["gws", "giants", "greater western sydney"], color: "#f57920" },
+    { match: ["hawthorn", "hawks"], color: "#4d2004" },
+    { match: ["richmond", "tigers"], color: "#ffd200" },
+    { match: ["st kilda", "saints"], color: "#ed0f05" },
+    { match: ["sydney", "swans"], color: "#e2231a" },
+    { match: ["west coast", "eagles"], color: "#003087" },
+    { match: ["western bulldogs", "bulldogs", "footscray"], color: "#c60c30" }
+  ];
+  var FALLBACK_TEAM_COLORS = { A: "#3b6fd1", B: "#c0392b" };
+
+  function getTeamColor(name, fallbackLetter) {
+    var n = (name || "").trim().toLowerCase();
+    if (n) {
+      for (var i = 0; i < AFL_TEAM_COLORS.length; i++) {
+        var entry = AFL_TEAM_COLORS[i];
+        for (var j = 0; j < entry.match.length; j++) {
+          if (n.indexOf(entry.match[j]) !== -1) return entry.color;
+        }
+      }
+    }
+    return FALLBACK_TEAM_COLORS[fallbackLetter] || "#888888";
+  }
+
+  // Returns "A", "B", or null (unconfirmed/unknown player) for a player name.
+  function playerTeamLetter(playerName) {
+    if (state.teamA.players.indexOf(playerName) !== -1) return "A";
+    if (state.teamB.players.indexOf(playerName) !== -1) return "B";
+    return null;
+  }
+
+  function teamDot(letter) {
+    var name = letter === "A" ? state.teamA.name : state.teamB.name;
+    var color = getTeamColor(name, letter);
+    var title = name || (letter === "A" ? "Home team" : "Away team");
+    return '<span class="team-dot" style="background:' + color + '" title="' + escapeHtml(title) + '"></span>';
+  }
+
+  // Wraps a player's name with a coloured dot for whichever team they're on
+  // (no dot if the player can't be matched to either confirmed team).
+  function playerChip(playerName) {
+    var letter = playerTeamLetter(playerName);
+    var dot = letter ? teamDot(letter) : "";
+    return '<span class="player-chip">' + dot + escapeHtml(playerName) + '</span>';
+  }
+
+  function renderTeamLegend(elId) {
+    var el = document.getElementById(elId);
+    if (!el) return;
+    if (!state.teamA.name && !state.teamB.name) { el.innerHTML = ""; return; }
+    el.innerHTML = '<div class="team-legend">' +
+      '<span class="legend-item">' + teamDot("A") + escapeHtml(state.teamA.name || "Home team") + '</span>' +
+      '<span class="legend-item">' + teamDot("B") + escapeHtml(state.teamB.name || "Away team") + '</span>' +
+      '</div>';
+  }
+
+  // ---------- Tabs ----------
+  var tabs = Array.prototype.slice.call(document.querySelectorAll("nav.tabs button"));
+  tabs.forEach(function (btn) {
+    btn.addEventListener("click", function () { activateTab(btn.getAttribute("data-tab")); });
+  });
+
+  function activateTab(name) {
+    tabs.forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
+    Array.prototype.slice.call(document.querySelectorAll("section.panel")).forEach(function (p) {
+      p.classList.toggle("active", p.id === "panel-" + name);
+    });
+    // Some tabs are only fully re-rendered by renderAll(), which doesn't run
+    // on every small edit (e.g. typing a tip only refreshes the Tips page
+    // itself). Re-render the destination tab here too, so switching to it
+    // always reflects the latest state instead of whatever was last drawn.
+    if (name === "review") renderReview();
+    else if (name === "payments") renderPayments();
+    else if (name === "draws") renderDraws();
+    else if (name === "tips") renderTips();
+    else if (name === "setup") { renderParticipants(); renderAllocationInfo(); }
+    else if (name === "results") renderResultsSetup();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  var getStartedBtn = document.getElementById("getStartedBtn");
+  if (getStartedBtn) getStartedBtn.addEventListener("click", function () { activateTab("teams"); });
+
+  // Generic "Next" buttons: each has data-goto="<tab>" and jumps straight there.
+  Array.prototype.slice.call(document.querySelectorAll("[data-goto]")).forEach(function (btn) {
+    btn.addEventListener("click", function () { activateTab(btn.getAttribute("data-goto")); });
+  });
+
+  // ---------- Setup: entry fee ----------
+  var entryFeeEl = document.getElementById("entryFee");
+  entryFeeEl.value = state.entryFee != null ? state.entryFee : "";
+  entryFeeEl.addEventListener("input", function () {
+    state.entryFee = entryFeeEl.value === "" ? null : Number(entryFeeEl.value);
+    saveState();
+    renderPayments();
+  });
+
+  // ---------- Setup: participants ----------
+  var newParticipantEl = document.getElementById("newParticipant");
+  document.getElementById("addParticipantBtn").addEventListener("click", addParticipant);
+  newParticipantEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") addParticipant();
+  });
+
+  function addParticipant() {
+    var name = newParticipantEl.value.trim();
+    if (!name) return;
+    state.participants.push({ id: uid(), name: name });
+    newParticipantEl.value = "";
+    // A prior draw was dealt out across whichever entrants existed at the time,
+    // so it won't include this new person — clear it rather than leave a stale,
+    // partial allocation that silently excludes anyone added afterwards.
+    if (state.draws.normSmith) state.draws = { normSmith: null, firstGoal: null };
+    saveState();
+    renderParticipants();
+    renderAll();
+  }
+
+  function removeParticipant(id) {
+    state.participants = state.participants.filter(function (p) { return p.id !== id; });
+    delete state.payments[id];
+    delete state.tips.halftime[id];
+    delete state.tips.fulltime[id];
+    // Same reasoning as addParticipant: the roster changed, so any existing
+    // draw no longer reflects who's actually in the sweep. Clear it rather
+    // than leave orphaned or uneven allocations in place.
+    if (state.draws.normSmith) state.draws = { normSmith: null, firstGoal: null };
+    saveState();
+    renderAll();
+  }
+
+  function renderParticipants() {
+    var list = document.getElementById("participantList");
+    var empty = document.getElementById("participantEmpty");
+    list.innerHTML = "";
+    empty.style.display = state.participants.length ? "none" : "block";
+    state.participants.forEach(function (p) {
+      var row = document.createElement("div");
+      row.className = "participant-row";
+      row.innerHTML =
+        '<span class="name">' + escapeHtml(p.name) + '</span>' +
+        '<button class="btn btn-danger btn-sm" data-remove="' + p.id + '">Remove</button>';
+      list.appendChild(row);
+    });
+    list.querySelectorAll("[data-remove]").forEach(function (btn) {
+      btn.addEventListener("click", function () { removeParticipant(btn.getAttribute("data-remove")); });
+    });
+  }
+
+  // ---------- Teams ----------
+  var teamAName = document.getElementById("teamAName");
+  var teamBName = document.getElementById("teamBName");
+  var teamAPlayers = document.getElementById("teamAPlayers");
+  var teamBPlayers = document.getElementById("teamBPlayers");
+
+  teamAName.value = state.teamA.name;
+  teamBName.value = state.teamB.name;
+  teamAPlayers.value = state.teamA.players.join("\n");
+  teamBPlayers.value = state.teamB.players.join("\n");
+
+  // Different hint depending on whether teams were baked into the code
+  // (DEFAULT_TEAM_A/B above) or left blank for the admin to fill in.
+  document.getElementById("teamsHint").textContent =
+    (DEFAULT_TEAM_A.players.length && DEFAULT_TEAM_B.players.length)
+      ? "The teams below have been taken from available sources. Check for any late changes or emergency replacements before proceeding."
+      : "Teams are usually confirmed on afl.com.au from around 6:30pm on Grand Final eve / day. Enter each team's name and paste in their full player list (one player per line — team sheet or full squad list both work). Tip: this app can't fetch afl.com.au itself — once teams are up, paste the afl.com.au lineup link to Claude in chat and ask it to read out both squads, then paste the lists in below.";
+
+  document.getElementById("confirmTeamsBtn").addEventListener("click", function () {
+    var aName = teamAName.value.trim();
+    var bName = teamBName.value.trim();
+    var aPlayers = parsePlayers(teamAPlayers.value);
+    var bPlayers = parsePlayers(teamBPlayers.value);
+    var statusEl = document.getElementById("teamsStatus");
+
+    if (!aName || !bName) {
+      statusEl.innerHTML = '<div class="status-banner warn">Enter both team names first.</div>';
+      return;
+    }
+    if (aPlayers.length === 0 || bPlayers.length === 0) {
+      statusEl.innerHTML = '<div class="status-banner warn">Both teams need at least one player listed.</div>';
+      return;
+    }
+    state.teamA = { name: aName, players: aPlayers };
+    state.teamB = { name: bName, players: bPlayers };
+    state.teamsConfirmed = true;
+    // Confirming a new team sheet invalidates any prior draws to keep things consistent.
+    state.draws = { normSmith: null, firstGoal: null };
+    saveState();
+    statusEl.innerHTML = '<div class="status-banner ok">Teams confirmed: ' + escapeHtml(aName) + ' vs ' + escapeHtml(bName) +
+      ' (' + aPlayers.length + ' + ' + bPlayers.length + ' players).</div>';
+    renderAll();
+  });
+
+  function parsePlayers(text) {
+    return text.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  // ---------- Draws ----------
+  // Deliberately no window.confirm() gate here: some embedded/sandboxed views
+  // (e.g. an iframed artifact) silently block native confirm() dialogs, which
+  // would make this button appear to do nothing on a re-run. The on-screen
+  // status banner already makes clear that re-running overwrites results.
+  document.getElementById("runDrawsBtn").addEventListener("click", function () {
+    if (!canRunDraws()) return;
+    var allPlayers = state.teamA.players.concat(state.teamB.players);
+    var participants = state.participants;
+    var alloc = computeAllocation(allPlayers.length, participants.length);
+
+    // Randomly pick who gets the Norm Smith "lucky extra" picks.
+    var nsLuckyIds = new Set(shuffle(participants).slice(0, alloc.remainder).map(function (p) { return p.id; }));
+
+    // For First Goal, prefer participants who didn't already get a Norm Smith lucky extra,
+    // so the extra picks spread across as many different people as possible.
+    var eligible = participants.filter(function (p) { return !nsLuckyIds.has(p.id); });
+    var fgLuckyIds = new Set();
+    if (alloc.remainder <= eligible.length) {
+      shuffle(eligible).slice(0, alloc.remainder).forEach(function (p) { fgLuckyIds.add(p.id); });
+    } else {
+      eligible.forEach(function (p) { fgLuckyIds.add(p.id); });
+      var stillNeeded = alloc.remainder - eligible.length;
+      shuffle(Array.from(nsLuckyIds)).slice(0, stillNeeded).forEach(function (id) { fgLuckyIds.add(id); });
+    }
+
+    state.draws.normSmith = dealWithLuckyExtras(allPlayers, participants, nsLuckyIds);
+    state.draws.firstGoal = dealWithLuckyExtras(allPlayers, participants, fgLuckyIds);
+    saveState();
+    renderDraws();
+  });
+
+  function canRunDraws() {
+    return state.teamsConfirmed && state.participants.length >= 1 &&
+      (state.teamA.players.length + state.teamB.players.length) >= 1;
+  }
+
+  // Base selections everyone gets, plus how many "lucky extra" picks are left over.
+  function computeAllocation(totalPlayers, totalParticipants) {
+    if (!totalParticipants) return { base: 0, remainder: 0 };
+    var base = Math.floor(totalPlayers / totalParticipants);
+    var remainder = totalPlayers - base * totalParticipants;
+    return { base: base, remainder: remainder };
+  }
+
+  // Deals `base` players to every participant, then hands the leftover cards
+  // one each to the participants in luckyIdSet (exactly matches the remainder).
+  function dealWithLuckyExtras(players, participants, luckyIdSet) {
+    var shuffled = shuffle(players);
+    var base = participants.length ? Math.floor(players.length / participants.length) : 0;
+    var result = {};
+    participants.forEach(function (p) { result[p.id] = []; });
+    var idx = 0;
+    participants.forEach(function (p) {
+      for (var k = 0; k < base; k++) { result[p.id].push(shuffled[idx++]); }
+    });
+    participants.forEach(function (p) {
+      if (luckyIdSet.has(p.id)) { result[p.id].push(shuffled[idx++]); }
+    });
+    return result;
+  }
+
+  // ---------- Prize pool ----------
+  // Splits the pool into 4 whole-dollar amounts. If it doesn't divide evenly,
+  // Full-time margin gets first priority for the extra dollar(s), then Half-time margin.
+  function computeWinnings() {
+    var fee = state.entryFee;
+    var n = state.participants.length;
+    if (!fee || fee <= 0 || !n) return null;
+    var totalPool = fee * n;
+    var totalWhole = Math.floor(totalPool + 1e-9);
+    var base = Math.floor(totalWhole / 4);
+    var remainder = totalWhole - base * 4;
+    var amounts = { normSmith: base, firstGoal: base, halftime: base, fulltime: base };
+    var priority = ["fulltime", "halftime", "normSmith", "firstGoal"];
+    for (var i = 0; i < remainder; i++) amounts[priority[i]] += 1;
+    return { fee: fee, entrants: n, totalPool: totalWhole, amounts: amounts };
+  }
+
+  // ---------- Setup: selection allocation preview ----------
+  function renderAllocationInfo() {
+    var el = document.getElementById("allocationInfo");
+    if (!el) return;
+    var n = state.participants.length;
+    if (!n) {
+      el.innerHTML = '<div class="empty">Add entrants above to see how selections will be split up.</div>';
+      return;
+    }
+    if (!state.teamsConfirmed) {
+      el.innerHTML = '<div class="status-banner info">Confirm the two teams (Teams tab) to see how many Norm Smith Medal and First Goalscorer selections each entrant will get.</div>';
+      return;
+    }
+    var totalPlayers = state.teamA.players.length + state.teamB.players.length;
+    var alloc = computeAllocation(totalPlayers, n);
+    var html = '<div class="kv"><span class="k">Entrants</span><span class="v">' + n + '</span></div>' +
+      '<div class="kv"><span class="k">Players in the draw pool</span><span class="v">' + totalPlayers + '</span></div>' +
+      '<div class="kv"><span class="k">Base selections per person</span><span class="v">' + alloc.base + ' each (Norm Smith &amp; First Goal)</span></div>';
+    if (alloc.remainder > 0) {
+      html += '<div class="kv"><span class="k">Lucky extra selections</span><span class="v">' + alloc.remainder + ' for Norm Smith, ' + alloc.remainder + ' for First Goal</span></div>' +
+        '<div class="alloc-note">' + alloc.remainder + ' entrant(s) will randomly get one extra Norm Smith pick (' + (alloc.base + 1) + ' instead of ' + alloc.base + '), and separately ' + alloc.remainder + ' will randomly get one extra First Goal pick. Where possible the two "lucky extra" groups are different people, so the extra luck is spread across as many entrants as possible before anyone gets a second one.</div>';
+    } else {
+      html += '<div class="alloc-note">' + totalPlayers + ' players split evenly across ' + n + ' entrants — no lucky extras needed.</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  function renderDraws() {
+    var gate = document.getElementById("drawsGate");
+    var runBtn = document.getElementById("runDrawsBtn");
+    var ready = canRunDraws();
+    runBtn.disabled = !ready;
+    if (!ready) {
+      var missing = [];
+      if (state.participants.length < 1) missing.push("add entrants");
+      if (!state.teamsConfirmed) missing.push("confirm the two teams");
+      gate.innerHTML = '<div class="status-banner warn">Before drawing: ' + missing.join(" and ") + '.</div>';
+    } else if (!state.draws.normSmith) {
+      gate.innerHTML = '<div class="status-banner info">Ready to draw for ' + state.participants.length + ' entrant(s) across ' +
+        (state.teamA.players.length + state.teamB.players.length) + ' players.</div>';
+    } else {
+      gate.innerHTML = '<div class="status-banner ok">Draws complete. Re-run any time to redo (this overwrites current results).</div>';
+    }
+
+    renderTeamLegend("drawsTeamLegend");
+
+    var nsCard = document.getElementById("normSmithCard");
+    var fgCard = document.getElementById("firstGoalCard");
+    if (state.draws.normSmith) {
+      nsCard.style.display = "";
+      fgCard.style.display = "";
+      renderDrawResults("normSmithResults", state.draws.normSmith);
+      renderDrawResults("firstGoalResults", state.draws.firstGoal);
+    } else {
+      nsCard.style.display = "none";
+      fgCard.style.display = "none";
+    }
+    renderStepGating();
+  }
+
+  function renderDrawResults(containerId, drawMap) {
+    var container = document.getElementById(containerId);
+    container.innerHTML = "";
+    state.participants.forEach(function (p) {
+      var players = drawMap[p.id] || [];
+      var div = document.createElement("div");
+      div.className = "draw-card";
+      div.innerHTML = '<div class="who">' + escapeHtml(p.name) + '</div>' +
+        '<div class="players">' + (players.length ? players.map(playerChip).join(", ") : "<em>No player this round</em>") + '</div>';
+      container.appendChild(div);
+    });
+  }
+
+  // ---------- Tips ----------
+  function renderTips() {
+    var container = document.getElementById("tipsList");
+    if (!state.participants.length) {
+      container.innerHTML = '<div class="empty">Add entrants first.</div>';
+      return;
+    }
+    if (!state.teamsConfirmed) {
+      container.innerHTML = '<div class="empty">Confirm the two teams first.</div>';
+      return;
+    }
+    var htConflicts = findConflicts(state.tips.halftime);
+    var ftConflicts = findConflicts(state.tips.fulltime);
+
+    var html = "";
+    state.participants.forEach(function (p) {
+      html += buildTipCard(p, htConflicts, ftConflicts);
+    });
+    container.innerHTML = html;
+
+    container.querySelectorAll(".tip-team").forEach(function (el) {
+      el.addEventListener("change", function () { updateTip(el); });
+    });
+    container.querySelectorAll(".tip-margin").forEach(function (el) {
+      el.addEventListener("input", function () { updateTip(el); });
+    });
+  }
+
+  function buildTipCard(p, htConflicts, ftConflicts) {
+    var htTip = state.tips.halftime[p.id] || { team: "", margin: "" };
+    var ftTip = state.tips.fulltime[p.id] || { team: "", margin: "" };
+    return '<div class="tip-card">' +
+      '<div class="tip-card-name">' + escapeHtml(p.name) + '</div>' +
+      buildTipRow("Half-time", "halftime", p.id, htTip, htConflicts.has(p.id)) +
+      buildTipRow("Full-time", "fulltime", p.id, ftTip, ftConflicts.has(p.id)) +
+      '</div>';
+  }
+
+  function buildTipRow(label, round, pid, tip, isConflict) {
+    return '<div class="tip-round-row">' +
+      '<span class="tip-round-label">' + label + '</span>' +
+      '<select class="tip-team ' + (isConflict ? "conflict" : "") + '" data-round="' + round + '" data-pid="' + pid + '">' +
+      '<option value="">—</option>' +
+      '<option value="A"' + (tip.team === "A" ? " selected" : "") + '>' + escapeHtml(state.teamA.name) + '</option>' +
+      '<option value="B"' + (tip.team === "B" ? " selected" : "") + '>' + escapeHtml(state.teamB.name) + '</option>' +
+      '</select>' +
+      '<input type="number" min="0" step="1" class="tip-margin ' + (isConflict ? "conflict" : "") + '" data-round="' + round + '" data-pid="' + pid + '" value="' + (tip.margin === "" || tip.margin == null ? "" : tip.margin) + '" placeholder="pts">' +
+      '</div>';
+  }
+
+  function updateTip(el) {
+    var round = el.getAttribute("data-round");
+    var pid = el.getAttribute("data-pid");
+    var card = el.closest(".tip-card");
+    var teamEl = card.querySelector('.tip-team[data-round="' + round + '"][data-pid="' + pid + '"]');
+    var marginEl = card.querySelector('.tip-margin[data-round="' + round + '"][data-pid="' + pid + '"]');
+    var team = teamEl.value;
+    var margin = marginEl.value === "" ? "" : Number(marginEl.value);
+    state.tips[round][pid] = { team: team, margin: margin };
+    saveState();
+    // Only refresh conflict outlines in place, so typing a margin doesn't lose focus.
+    refreshTipConflictHighlighting();
+    renderStepGating();
+  }
+
+  function refreshTipConflictHighlighting() {
+    ["halftime", "fulltime"].forEach(function (round) {
+      var conflicts = findConflicts(state.tips[round]);
+      document.querySelectorAll('.tip-team[data-round="' + round + '"], .tip-margin[data-round="' + round + '"]').forEach(function (el) {
+        el.classList.toggle("conflict", conflicts.has(el.getAttribute("data-pid")));
+      });
+    });
+  }
+
+  function findConflicts(tipsMap) {
+    var seen = {};
+    var conflictIds = new Set();
+    Object.keys(tipsMap).forEach(function (pid) {
+      var tip = tipsMap[pid];
+      if (!tip || tip.team === "" || tip.margin === "" || tip.margin == null) return;
+      var key = tip.team + "|" + tip.margin;
+      if (!seen[key]) seen[key] = [];
+      seen[key].push(pid);
+    });
+    Object.keys(seen).forEach(function (key) {
+      if (seen[key].length > 1) seen[key].forEach(function (pid) { conflictIds.add(pid); });
+    });
+    return conflictIds;
+  }
+
+  // ---------- Payments ----------
+  var markAllPaidBtn = document.getElementById("markAllPaidBtn");
+  if (markAllPaidBtn) {
+    markAllPaidBtn.addEventListener("click", function () {
+      if (!state.participants.length) return;
+      state.participants.forEach(function (p) { state.payments[p.id] = true; });
+      saveState();
+      renderPayments();
+      renderStepGating();
+    });
+  }
+
+  function renderPayments() {
+    var summary = document.getElementById("paymentSummary");
+    var list = document.getElementById("paymentList");
+    var fee = state.entryFee || 0;
+    var paidCount = state.participants.filter(function (p) { return state.payments[p.id]; }).length;
+    var total = state.participants.length * fee;
+    var collected = paidCount * fee;
+
+    summary.innerHTML =
+      '<div class="kv"><span class="k">Entry fee</span><span class="v">$' + fee.toFixed(2) + '</span></div>' +
+      '<div class="kv"><span class="k">Entrants</span><span class="v">' + state.participants.length + '</span></div>' +
+      '<div class="kv"><span class="k">Pool total (once everyone pays)</span><span class="v">$' + total.toFixed(2) + '</span></div>' +
+      '<div class="kv"><span class="k">Collected so far</span><span class="v">$' + collected.toFixed(2) + ' (' + paidCount + '/' + state.participants.length + ')</span></div>';
+
+    if (!state.participants.length) {
+      list.innerHTML = '<div class="empty">Add entrants in the Entrants tab first.</div>';
+      renderStepGating();
+      return;
+    }
+    var html = "";
+    state.participants.forEach(function (p) {
+      var paid = !!state.payments[p.id];
+      html += '<div class="participant-row">' +
+        '<span class="name">' + escapeHtml(p.name) + '</span>' +
+        '<span class="pill ' + (paid ? "ok" : "warn") + '">' + (paid ? "Paid" : "Unpaid") + '</span>' +
+        '<button class="btn btn-sm ' + (paid ? "btn-outline" : "btn-primary") + '" data-toggle-paid="' + p.id + '">' + (paid ? "Mark unpaid" : "Mark paid") + '</button>' +
+        '</div>';
+    });
+    list.innerHTML = html;
+    list.querySelectorAll("[data-toggle-paid]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-toggle-paid");
+        state.payments[id] = !state.payments[id];
+        saveState();
+        renderPayments();
+      });
+    });
+    renderStepGating();
+  }
+
+  // ---------- Review ----------
+  function firstAlpha(list) {
+    if (!list || !list.length) return null;
+    return list.slice().sort(function (a, b) { return a.localeCompare(b); })[0];
+  }
+
+  function tipSignedMargin(tip) {
+    if (!tip || tip.team === "" || tip.team == null || tip.margin === "" || tip.margin == null) return null;
+    var m = Number(tip.margin);
+    if (tip.team === "A") return m;
+    if (tip.team === "B") return -m;
+    return 0;
+  }
+
+  function formatTip(tip, teamAName, teamBName) {
+    if (!tip || tip.team === "" || tip.team == null || tip.margin === "" || tip.margin == null) return "—";
+    var teamName = tip.team === "A" ? teamAName : teamBName;
+    return teamDot(tip.team) + escapeHtml(teamName) + " by " + tip.margin;
+  }
+
+  function sortReviewRows(rows, mode) {
+    var sorted = rows.slice();
+    function cmpNameFallback(a, b) { return a.p.name.localeCompare(b.p.name); }
+    if (mode === "firstGoal" || mode === "normSmith") {
+      var keyName = mode === "firstGoal" ? "fgKey" : "nsKey";
+      sorted.sort(function (a, b) {
+        var ak = a[keyName], bk = b[keyName];
+        if (ak == null && bk == null) return cmpNameFallback(a, b);
+        if (ak == null) return 1;
+        if (bk == null) return -1;
+        var c = ak.localeCompare(bk);
+        return c !== 0 ? c : cmpNameFallback(a, b);
+      });
+    } else if (mode === "halftime" || mode === "fulltime") {
+      var mKey = mode === "halftime" ? "htKey" : "ftKey";
+      sorted.sort(function (a, b) {
+        var ak = a[mKey], bk = b[mKey];
+        if (ak == null && bk == null) return cmpNameFallback(a, b);
+        if (ak == null) return 1;
+        if (bk == null) return -1;
+        // Descending: highest Team A margin first, down to 0, then ascending Team B margin.
+        if (ak !== bk) return bk - ak;
+        return cmpNameFallback(a, b);
+      });
+    } else {
+      sorted.sort(cmpNameFallback);
+    }
+    return sorted;
+  }
+
+  function renderReviewWinnings() {
+    var el = document.getElementById("reviewWinnings");
+    if (!el) return;
+    var w = computeWinnings();
+    if (!w) {
+      el.innerHTML = '<div class="empty">Set an entry fee and add entrants to see the prize pool.</div>';
+      return;
+    }
+    el.innerHTML =
+      '<div class="kv"><span class="k">Entry fee × entrants</span><span class="v">$' + w.fee.toFixed(2) + ' × ' + w.entrants + '</span></div>' +
+      '<div class="kv"><span class="k">Total pool</span><span class="v">$' + w.totalPool + '</span></div>' +
+      '<div class="kv"><span class="k">🏅 Norm Smith Medal</span><span class="v">$' + w.amounts.normSmith + '</span></div>' +
+      '<div class="kv"><span class="k">⚽ First Goalscorer</span><span class="v">$' + w.amounts.firstGoal + '</span></div>' +
+      '<div class="kv"><span class="k">⏱ Half-time margin</span><span class="v">$' + w.amounts.halftime + '</span></div>' +
+      '<div class="kv"><span class="k">🏁 Full-time margin</span><span class="v">$' + w.amounts.fulltime + '</span></div>';
+  }
+
+  function renderReviewList() {
+    var container = document.getElementById("reviewList");
+    var sortSel = document.getElementById("reviewSort");
+    if (!container || !sortSel) return;
+    renderTeamLegend("reviewTeamLegend");
+    if (!state.participants.length) {
+      container.innerHTML = '<div class="empty">Add entrants first.</div>';
+      return;
+    }
+    var mode = sortSel.value || "name";
+    var teamAName = state.teamA.name || "Team A";
+    var teamBName = state.teamB.name || "Team B";
+    var rows = state.participants.map(function (p) {
+      var nsList = (state.draws.normSmith && state.draws.normSmith[p.id]) || [];
+      var fgList = (state.draws.firstGoal && state.draws.firstGoal[p.id]) || [];
+      var htTip = state.tips.halftime[p.id];
+      var ftTip = state.tips.fulltime[p.id];
+      return {
+        p: p, nsList: nsList, fgList: fgList, htTip: htTip, ftTip: ftTip,
+        nsKey: firstAlpha(nsList), fgKey: firstAlpha(fgList),
+        htKey: tipSignedMargin(htTip), ftKey: tipSignedMargin(ftTip)
+      };
+    });
+    var sorted = sortReviewRows(rows, mode);
+    var html = "";
+    sorted.forEach(function (r) {
+      html += '<div class="draw-card">' +
+        '<div class="who">' + escapeHtml(r.p.name) + '</div>' +
+        '<div class="players">🏅 Norm Smith: ' + (r.nsList.length ? r.nsList.map(playerChip).join(", ") : "—") + '</div>' +
+        '<div class="players">⚽ First Goal: ' + (r.fgList.length ? r.fgList.map(playerChip).join(", ") : "—") + '</div>' +
+        '<div class="players">⏱ Half-time: ' + formatTip(r.htTip, teamAName, teamBName) + '</div>' +
+        '<div class="players">🏁 Full-time: ' + formatTip(r.ftTip, teamAName, teamBName) + '</div>' +
+        '</div>';
+    });
+    container.innerHTML = html;
+  }
+
+  function renderReview() {
+    renderReviewWinnings();
+    renderReviewList();
+  }
+
+  var reviewSortEl = document.getElementById("reviewSort");
+  if (reviewSortEl) reviewSortEl.addEventListener("change", renderReviewList);
+
+  // ---------- Results ----------
+  function renderResultsSetup() {
+    var allPlayers = state.teamA.players.concat(state.teamB.players);
+    var nsSel = document.getElementById("actualNormSmith");
+    var fgSel = document.getElementById("actualFirstGoal");
+    [nsSel, fgSel].forEach(function (sel) {
+      var current = sel.value;
+      sel.innerHTML = '<option value="">— Select player —</option>' +
+        allPlayers.map(function (pl) { return '<option value="' + escapeHtml(pl) + '">' + escapeHtml(pl) + '</option>'; }).join("");
+      sel.value = current;
+    });
+    nsSel.value = state.results.normSmith || "";
+    fgSel.value = state.results.firstGoal || "";
+
+    document.getElementById("htLabelA").textContent = state.teamA.name || "Team A";
+    document.getElementById("htLabelB").textContent = state.teamB.name || "Team B";
+    document.getElementById("ftLabelA").textContent = state.teamA.name || "Team A";
+    document.getElementById("ftLabelB").textContent = state.teamB.name || "Team B";
+
+    document.getElementById("actualHTScoreA").value = state.results.ht.a != null ? state.results.ht.a : "";
+    document.getElementById("actualHTScoreB").value = state.results.ht.b != null ? state.results.ht.b : "";
+    document.getElementById("actualFTScoreA").value = state.results.ft.a != null ? state.results.ft.a : "";
+    document.getElementById("actualFTScoreB").value = state.results.ft.b != null ? state.results.ft.b : "";
+
+    if (state.results._saved) renderWinners();
+  }
+
+  document.getElementById("saveResultsBtn").addEventListener("click", function () {
+    state.results.normSmith = document.getElementById("actualNormSmith").value;
+    state.results.firstGoal = document.getElementById("actualFirstGoal").value;
+    var htA = document.getElementById("actualHTScoreA").value;
+    var htB = document.getElementById("actualHTScoreB").value;
+    var ftA = document.getElementById("actualFTScoreA").value;
+    var ftB = document.getElementById("actualFTScoreB").value;
+    state.results.ht = { a: htA === "" ? null : Number(htA), b: htB === "" ? null : Number(htB) };
+    state.results.ft = { a: ftA === "" ? null : Number(ftA), b: ftB === "" ? null : Number(ftB) };
+    state.results._saved = true;
+    saveState();
+    renderWinners();
+  });
+
+  function marginFromScore(scoreObj) {
+    if (scoreObj.a == null || scoreObj.b == null) return null;
+    if (scoreObj.a === scoreObj.b) return { team: null, margin: 0 };
+    return scoreObj.a > scoreObj.b ? { team: "A", margin: scoreObj.a - scoreObj.b } : { team: "B", margin: scoreObj.b - scoreObj.a };
+  }
+
+  function renderWinners() {
+    var card = document.getElementById("winnersCard");
+    var body = document.getElementById("winnersBody");
+    card.style.display = "";
+
+    var w = computeWinnings();
+    var amt = w ? w.amounts : null;
+    var html = "";
+
+    // First goal
+    html += winnerBlock("⚽ First Goalscorer", state.results.firstGoal, function (pid) {
+      return state.draws.firstGoal && (state.draws.firstGoal[pid] || []).indexOf(state.results.firstGoal) !== -1;
+    }, amt ? amt.firstGoal : null);
+
+    // Half-time margin
+    var htActual = marginFromScore(state.results.ht);
+    html += marginWinnerBlock("⏱ Half-time", htActual, state.tips.halftime, amt ? amt.halftime : null);
+
+    // Full-time margin
+    var ftActual = marginFromScore(state.results.ft);
+    html += marginWinnerBlock("🏁 Full-time", ftActual, state.tips.fulltime, amt ? amt.fulltime : null);
+
+    // Norm Smith
+    html += winnerBlock("🏅 Norm Smith Medal", state.results.normSmith, function (pid) {
+      return state.draws.normSmith && (state.draws.normSmith[pid] || []).indexOf(state.results.normSmith) !== -1;
+    }, amt ? amt.normSmith : null);
+
+    body.innerHTML = html;
+  }
+
+  function winnerBlock(title, actualPlayer, isWinnerFn, prizeAmount) {
+    var prizeText = prizeAmount != null ? " ($" + prizeAmount + ")" : "";
+    if (!actualPlayer) {
+      return '<div class="kv"><span class="k">' + title + prizeText + '</span><span class="v">— not entered —</span></div>';
+    }
+    var winners = state.participants.filter(function (p) { return isWinnerFn(p.id); }).map(function (p) { return p.name; });
+    return '<div class="draw-card ' + (winners.length ? "winner-highlight" : "") + '">' +
+      '<div class="who">' + title + prizeText + ': ' + escapeHtml(actualPlayer) + '</div>' +
+      '<div class="players">' + (winners.length ? "Held by: " + winners.map(escapeHtml).join(", ") + (winners.length > 1 ? " (prize split between them)" : "") : "No one currently holds this player") + '</div>' +
+      '</div>';
+  }
+
+  function marginWinnerBlock(title, actual, tipsMap, prizeAmount) {
+    var prizeText = prizeAmount != null ? " ($" + prizeAmount + ")" : "";
+    if (!actual) {
+      return '<div class="kv"><span class="k">' + title + prizeText + '</span><span class="v">— not entered —</span></div>';
+    }
+    var teamName = actual.team === "A" ? state.teamA.name : actual.team === "B" ? state.teamB.name : "Draw";
+    var resultText = actual.team ? (escapeHtml(teamName) + " by " + actual.margin) : ("Scores level");
+
+    // Signed margin: positive = Team A ahead by that much, negative = Team B ahead.
+    // This measures every tip on one number line, so "picked the wrong team" is
+    // automatically penalised more than "picked the right team, wrong margin" —
+    // no arbitrary tie-break needed. Whoever is closest always wins; an exact
+    // match is just a zero-distance win.
+    var actualSigned = actual.team === "A" ? Number(actual.margin) : actual.team === "B" ? -Number(actual.margin) : 0;
+    var withDiff = state.participants
+      .map(function (p) {
+        var t = tipsMap[p.id];
+        if (!t || t.team === "" || t.team == null || t.margin === "" || t.margin == null) return null;
+        var tipSigned = t.team === "A" ? Number(t.margin) : t.team === "B" ? -Number(t.margin) : 0;
+        return { name: p.name, diff: Math.abs(actualSigned - tipSigned) };
+      })
+      .filter(Boolean);
+
+    if (!withDiff.length) {
+      return '<div class="draw-card">' +
+        '<div class="who">' + title + prizeText + ': ' + resultText + '</div>' +
+        '<div class="players">No tips submitted for this round</div>' +
+        '</div>';
+    }
+
+    var minDiff = Math.min.apply(null, withDiff.map(function (w) { return w.diff; }));
+    var winners = withDiff.filter(function (w) { return w.diff === minDiff; }).map(function (w) { return w.name; });
+    var isExact = minDiff === 0;
+    var label = isExact ? "Exact match: " : "Closest tip (off by " + minDiff + "): ";
+
+    return '<div class="draw-card winner-highlight">' +
+      '<div class="who">' + title + prizeText + ': ' + resultText + '</div>' +
+      '<div class="players">' + label + winners.map(escapeHtml).join(", ") + (winners.length > 1 ? " (prize split between them)" : "") + '</div>' +
+      '</div>';
+  }
+
+  // ---------- Step gating ----------
+  // A "Next" button on each step only appears once that step has enough
+  // done to sensibly move on. This never blocks jumping back to an earlier
+  // tab directly via the nav bar — it's just a nudge for moving forward.
+  function tipsComplete() {
+    if (!state.participants.length) return false;
+    var htConflicts = findConflicts(state.tips.halftime);
+    var ftConflicts = findConflicts(state.tips.fulltime);
+    if (htConflicts.size || ftConflicts.size) return false;
+    return state.participants.every(function (p) {
+      var ht = state.tips.halftime[p.id];
+      var ft = state.tips.fulltime[p.id];
+      return ht && ht.team !== "" && ht.team != null && ht.margin !== "" && ht.margin != null &&
+        ft && ft.team !== "" && ft.team != null && ft.margin !== "" && ft.margin != null;
+    });
+  }
+
+  function renderStepGating() {
+    var show = {
+      teams: state.teamsConfirmed,
+      setup: state.participants.length >= 2,
+      draws: !!state.draws.normSmith,
+      tips: tipsComplete(),
+      payments: state.participants.length > 0 && state.participants.every(function (p) { return !!state.payments[p.id]; }),
+      review: state.participants.length > 0
+    };
+    Object.keys(show).forEach(function (key) {
+      var el = document.getElementById("next-" + key);
+      if (el) el.style.display = show[key] ? "" : "none";
+    });
+  }
+
+  // ---------- Render all ----------
+  function renderAll() {
+    renderParticipants();
+    renderAllocationInfo();
+    renderDraws();
+    renderTips();
+    renderPayments();
+    renderReview();
+    renderResultsSetup();
+    renderStepGating();
+  }
+
+  renderAll();
+  activateTab("intro");
+})();
+</script>
+
+</body>
+</html>
