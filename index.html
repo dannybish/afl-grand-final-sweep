@@ -1924,13 +1924,25 @@ const db = getFirestore(fbApp);
   }
 
   // ---------- Boot ----------
+  // Kick off anonymous sign-in, then explicitly wait for Firebase Auth's
+  // initial state to fully settle (including that in-flight sign-in) via
+  // authStateReady() before touching Firestore at all. Calling Firestore
+  // methods synchronously inside the first onAuthStateChanged callback can
+  // race with the SDK's internal credential propagation on a cold load
+  // (e.g. opening a join link directly, with no prior user interaction) -
+  // authStateReady() is the documented way to avoid that race.
+  var booted = false;
+  signInAnonymously(auth).catch(function (e) { console.error("anon auth failed", e); });
   onAuthStateChanged(auth, function (user) {
-    if (user) {
+    if (user && !currentUid) {
       currentUid = user.uid;
-      boot();
+      if (!booted) { booted = true; boot(); }
     }
   });
-  signInAnonymously(auth).catch(function (e) { console.error("anon auth failed", e); });
+  auth.authStateReady().then(function () {
+    currentUid = auth.currentUser ? auth.currentUser.uid : currentUid;
+    if (!booted) { booted = true; boot(); }
+  });
 
   function boot() {
     var params = new URLSearchParams(location.search);
