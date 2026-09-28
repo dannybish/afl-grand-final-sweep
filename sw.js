@@ -2,7 +2,7 @@
 // instantly and works offline for the shell itself. Firebase/Firestore
 // network calls are always passed straight through (never cached), since
 // the sweep is inherently a live, shared, multi-device experience.
-var CACHE = "afl-sweep-shell-v2";
+var CACHE = "afl-sweep-shell-v3";
 var SHELL = ["./", "./index.html", "./manifest.json", "./qrcode.js"];
 
 self.addEventListener("install", function (event) {
