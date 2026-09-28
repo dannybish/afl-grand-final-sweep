@@ -2270,7 +2270,7 @@ var qrcode = function() {
           i++;
           // UTF-16 encodes 0x10000-0x10FFFF by
           // subtracting 0x10000 and splitting the
-         // 20 bits of 0x0-0xFFFFF into two halves
+          // 20 bits of 0x0-0xFFFFF into two halves
           charcode = 0x10000 + (((charcode & 0x3ff)<<10)
             | (str.charCodeAt(i) & 0x3ff));
           utf8.push(0xf0 | (charcode >>18),
